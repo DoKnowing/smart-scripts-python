@@ -295,8 +295,12 @@ class LagouCrawler(object):
                             if retry >= 0:
                                 LOG.info('抓取失败,重新第%d(%d)次抓取页面 url=%s' % (retry_cnt - retry, retry_cnt, job['url']))
                             time.sleep(30)
-                            proxies.remove(proxy)
-                            proxy = random.choice(proxies)
+                            try:
+                                proxies.remove(proxy)
+                                proxy = random.choice(proxies)
+                            except Exception, e:
+                                proxies = get_proxy(500)
+                                proxy = random.choice(proxies)
                         finally:
                             file.flush()
 
@@ -329,8 +333,12 @@ class LagouCrawler(object):
                                         LOG.info(
                                             '抓取失败,重新第%d(%d)次抓取页面 url=%s' % (retry_cnt - retry, retry_cnt, job['url']))
                                     time.sleep(30)
-                                    proxies.remove(proxy)
-                                    proxy = random.choice(proxies)
+                                    try:
+                                        proxies.remove(proxy)
+                                        proxy = random.choice(proxies)
+                                    except Exception, e:
+                                        proxies = get_proxy(500)
+                                        proxy = random.choice(proxies)
                                 finally:
                                     file.flush()
                     except Exception, e:
