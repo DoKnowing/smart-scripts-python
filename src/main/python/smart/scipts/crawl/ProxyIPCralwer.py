@@ -7,7 +7,7 @@ import sys
 sys.path.insert(0, '../util')
 reload(sys)
 sys.setdefaultencoding('utf-8')
-import os
+import os, time
 import logging.config
 
 logging.config.fileConfig('../sources/logging.conf')
@@ -39,12 +39,21 @@ def format_date(date):
 
 
 def insert_url(data):
-    sql = "insert into t_smart_proxy_ip (ip,port,city,country,anonymity,http_type,speed,connection_time,live_date,verify_date) " \
-          "values ('%s',%d,'%s','%s','%s','%s',%.3f,%.3f,%d,'%s')" \
+    sql = "insert into t_smart_proxy_ip (ip,port,city,country,anonymity,http_type,speed,connection_time,live_date,verify_date,state) " \
+          "values ('%s',%d,'%s','%s','%s','%s',%.3f,%.3f,%d,'%s',%d)" \
           % (data['ip_addr'], data['port'], data['server_city'], data['country'], data['anonymity']
-             , data['type'], data['speed'], data['connection_date'], data['live_date'], data['verify_date'])
+             , data['type'], data['speed'], data['connection_date'], data['live_date'], data['verify_date'], 0)
     LOG.info('[SQL] INSERT SQL = ' + sql)
     LOG.info('[SQL] 插入数据成功? %d' % MysqlUtil.insert(sql))
+
+
+def get_ip(proxy):
+    for http in proxy:
+        url = proxy[http]
+        return url[url.index('://') + 3:url.rindex(':')]
+
+
+SLEEP = [2, 5, 10]
 
 
 class ProxyIPCrawler(object):
@@ -90,54 +99,67 @@ class ProxyIPCrawler(object):
         return current_num, total_num, ips
 
     def download(self, url, start_page=0, end_page=sys.maxint):
+        new_url = url
         if start_page > 0:
-            url = url + '/' + str(start_page)
-        LOG.info('[URL] %s' % url)
+            new_url = url + '/' + str(start_page)
+        LOG.info('[URL] %s' % new_url)
 
-        proxies = get_proxy(100)
+        proxies = get_proxy(50)
         proxy = random.choice(proxies)
 
         current_num = -1
         total_num = -1
         flag = True
-        while flag and proxy:
+        while flag:
             try:
-                current_num, total_num, datas = self.analysis(url, proxy=proxy)
+                current_num, total_num, datas = self.analysis(new_url, proxy=proxy)
                 for data in datas:
                     insert_url(data)
                 flag = False
+                time.sleep(random.choice(SLEEP))
             except Exception, e:
-                proxies.remove(proxy)
-                proxy = None
-                if proxies:
+                try:
+                    disable_ip(get_ip(proxy))
+                    proxies.remove(proxy)
                     proxy = random.choice(proxies)
-                pass
+                except Exception, e2:
+                    proxies = get_proxy(50)
+                    proxy = random.choice(proxies)
         while current_num < total_num and current_num < end_page:
-            flag = True
+            retry = 1
             next_num = current_num + 1
             next_url = url + '/' + str(next_num)
             LOG.info('[URL] %s' % next_url)
-            while flag and proxy:
+            while retry >= 0:
                 try:
                     current_num, total_num, datas = self.analysis(next_url, proxy=proxy)
                     for data in datas:
                         insert_url(data)
                     current_num = next_num
                     flag = False
+                    time.sleep(random.choice(SLEEP))
+                    break
                 except Exception, e:
-                    proxies.remove(proxy)
-                    proxy = None
-                    if proxies:
+                    try:
+                        retry -= 1
+                        disable_ip(get_ip(proxy))
+                        proxies.remove(proxy)
                         proxy = random.choice(proxies)
-                    pass
+                    except Exception, e2:
+                        proxies = get_proxy(50)
+                        proxy = random.choice(proxies)
             if not proxy:
                 LOG.warn('代理已全部使用')
 
 
 if __name__ == "__main__":
+    # 从251开始
     url = 'http://www.xicidaili.com/nn'
+    ## 国内HTTPS代理_ip
+    # url = 'http://www.xicidaili.com/wn'
     local_path = 'D:/tmp/data/proxy_ip/ip.txt'
     # download_html(url, local_path)
     # print open_html(url)
     proxy = ProxyIPCrawler()
-    proxy.download(url, start_page=251)
+    proxy.download(url, start_page=520)
+    # proxy.download(url)

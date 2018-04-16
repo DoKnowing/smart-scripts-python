@@ -69,13 +69,10 @@ HEADER = {
     'User-Agent': random.choice(USER_AGENTS)
 }
 
-# 代理IP
-HOSTS = ['223.241.118.113:8010', '223.240.209.148:18118', '114.228.75.182:6666',
-         '115.221.112.139:25189', '61.143.23.225:47692', "sp.datatub.com:7629"]
-
 # 测试URL
 # TEST_URL = 'http://www.xicidaili.com/nn/2333'
 TEST_URL = 'https://www.lagou.com'
+# TEST_URL = 'http://www.baidu.com'
 
 
 def open_html(url, proxy=None, cookies_flag=False):
@@ -134,7 +131,7 @@ def verify_proxy(proxy):
     proxies = {'%s' % http_type.lower(): '%s://%s:%s' % (http_type.lower(), ip, port)}
     start = time.time()
     try:
-        res = requests.get(url=TEST_URL, headers=HEADER, timeout=15, proxies=proxies)
+        res = requests.get(url=TEST_URL, headers=HEADER, timeout=5, proxies=proxies)
         if not res.ok:
             LOG.error('FAIL Proxy!  ip=%s' % ip)
             proxy = None
@@ -150,7 +147,7 @@ def verify_proxy(proxy):
 
 
 def select_proxy_ip():
-    sql = "select ip,port,http_type,id from t_smart_proxy_ip where state=-1"
+    sql = "select ip,port,http_type,id from t_smart_proxy_ip where state=1"
     # sql = "select ip,port,http_type,id from t_smart_proxy_ip limit 500"
 
     proxies = MysqlUtil.query(sql)

@@ -22,6 +22,9 @@ from pyspark.mllib.regression import LinearRegressionWithSGD
 # 决策树回归
 from pyspark.mllib.tree import DecisionTree
 
+# 分词器
+import jieba
+
 
 def t1():
     sc = SparkContext(master='local[3]', appName='History')
@@ -447,10 +450,79 @@ def data_reduce_dimesion():
     print pc
 
 
+def analysis_nlp():
+    # 文档
+    documents = [['good', 'pig', 'apple'], ['hello', 'apple', 'pig'], ['apple', 'dog', 'good']]
+    # 文档的分类,与document坐标一致
+    class_vec = [0, 1, 2, 1, 0, 1]
+
+    ## 1. 计算P(y)
+    Py = {}
+    for lt in set(class_vec):
+        Py[lt] = float(class_vec.count(lt)) / float(len((class_vec)))
+
+    print u'分类概率 P(y) : %s' % Py
+
+    ## 2. 生成词典
+    dict_word = set()
+    [dict_word.add(word) for doc in documents for word in doc]
+    dict_word = list(dict_word)
+    print u'词典: %s' % dict_word
+
+    ## 3 计算词频 idf,tf
+    vocablen = len(dict_word)
+    documents_len = len(documents)
+    idf = numpy.zeros([1, vocablen])
+    tf = numpy.zeros([documents_len, vocablen])
+
+    for index in xrange(documents_len):
+        for word in documents[index]:
+            tf[index, dict_word.index(word)] += 1
+        for signleword in set(documents[index]):
+            idf[0, dict_word.index(signleword)] += 1
+
+    print 'idf : %s' % idf
+    print 'tf : %s' % tf
+
+    ## 4 计算P(x|y)
+    tdm = numpy.zeros([len(Py), vocablen])
+    sumlist = numpy.ones([len(Py), 1])
+
+    for index in xrange(documents_len):
+        tdm[class_vec[index]] += tf[index]
+        sumlist[class_vec[index]] = numpy.sum(tdm[class_vec[index]])
+
+    print 'tdm: %s' % tdm
+    print 'sumlist : %s' % sumlist
+    tdm = tdm / sumlist
+    print 'tdm : %s' % tdm
+
+
+def svd():
+    """
+    奇异值分解
+    :return:
+    """
+    A = numpy.mat([[5, 5, 3, 0, 5, 5], [5, 0, 4, 0, 4, 4], [0, 3, 0, 5, 4, 5], [5, 4, 3, 3, 5, 5]])
+    # print 'A: %s' % A
+    # print 'A.T: %s' % A.T
+    # U = A * A.T
+
+    U, S, V = numpy.linalg.svd(A)
+
+    print 'U: %s' % U
+    print 'S: %s' % S
+    print 'VT: %s' % V
+
+
 if __name__ == "__main__":
     # user_data()
     # mc_data()
     # regression()
     # optimize_regression()
     # clustering()
-    data_reduce_dimesion()
+    # data_reduce_dimesion()
+    # analysis_nlp()
+    svd()
+
+    jieba.cut()

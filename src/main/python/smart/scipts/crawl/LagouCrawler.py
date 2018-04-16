@@ -269,7 +269,7 @@ class LagouCrawler(object):
         ## 获取当前页的所有job列表
         proxies = get_proxy(500)
         proxy = random.choice(proxies)
-        retry_cnt = 1
+        retry_cnt = 0 # 不重提交
         file = open(dir + '/data_houduankaifa.txt', 'w')
         for cctu in cctus:
             try:
