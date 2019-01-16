@@ -11,7 +11,7 @@ from PIL import Image
 import numpy
 from pyspark import SparkContext
 from pyspark.mllib.clustering import KMeans, KMeansModel
-from pyspark.mllib.linalg import Vectors, DenseVector
+from pyspark.mllib.linalg import Vectors, DenseVector, Matrices
 from pyspark.mllib.feature import StandardScaler
 from pyspark.mllib.linalg import Matrix
 from pyspark.mllib.linalg.distributed import RowMatrix
@@ -85,7 +85,7 @@ def map_similarity(pair, v2):
 def user_data():
     sc = SparkContext(master='local[3]', appName='History')
     # userId|age|gender|职业|邮编
-    data = sc.textFile(u'D:\\tmp\\data\\movies\\ml-100k\\u.user').map(lambda line: t2(line, '|'))
+    data = sc.textFile(u'D:\\tmp\\data\\movies\\sma-ml-100k\\u.user').map(lambda line: t2(line, '|'))
 
     # 统计用户数
     # userNum = data.map(lambda user: user[0]).distinct().count()
@@ -145,7 +145,7 @@ def mc_data():
     # 推荐算法
     sc = SparkContext(master='local[3]', appName='ALS')
     # userId|moviesId|星级评价|时间戳
-    data = sc.textFile(u'D:\\tmp\\data\\movies\\ml-100k\\u.data').map(lambda line: t2(line, '\t'))
+    data = sc.textFile(u'D:\\tmp\\data\\movies\\sma-ml-100k\\u.data').map(lambda line: t2(line, '\t'))
     model = ALS.train(data.map(lambda x: (int(x[0]), int(x[1]), int(x[2]))), rank=50, iterations=10, lambda_=0.01)
 
     # 预测
@@ -375,9 +375,9 @@ def titel_factor(record, movie_clustring_mode):
 
 def clustering():
     sc = SparkContext(master='local[3]', appName='CLUSTERING')
-    movies = sc.textFile(u'D:\\tmp\\data\\movies\\ml-100k\\u.item').map(lambda line: t2(line, '|'))
+    movies = sc.textFile(u'D:\\tmp\\data\\movies\\sma-ml-100k\\u.item').map(lambda line: t2(line, '|'))
 
-    genres = sc.textFile(u'D:\\tmp\\data\\movies\\ml-100k\\u.genre')
+    genres = sc.textFile(u'D:\\tmp\\data\\movies\\sma-ml-100k\\u.genre')
     genre_map = genres.filter(lambda x: x) \
         .map(lambda line: t2(line, '|')).map(lambda x: (x[1], x[0])).collectAsMap()
 
@@ -385,7 +385,7 @@ def clustering():
     # print titlesAndGenres.take(10)
 
     # 训练推荐模型
-    raw_ratings = sc.textFile(u'D:\\tmp\\data\\movies\\ml-100k\\u.data').map(lambda line: t2(line, '\t')).map(
+    raw_ratings = sc.textFile(u'D:\\tmp\\data\\movies\\sma-ml-100k\\u.data').map(lambda line: t2(line, '\t')).map(
         lambda x: x[0:3])
     ratings = raw_ratings.map(lambda x: Rating(int(x[0]), int(x[1]), float(x[2])))
     # ratings.cache()
@@ -515,14 +515,40 @@ def svd():
     print 'VT: %s' % V
 
 
+def parse_test():
+    # sc = SparkContext(master='local[3]', appName='REGRESSION')
+    # data = [
+    #     LabeledPoint(0.0, Vectors.dense([0.2, 0.2])),
+    #     LabeledPoint(0.0, Vectors.dense([0.3, 0.2])),
+    #     LabeledPoint(1.0, Vectors.dense([3.0, 3.0])),
+    #     LabeledPoint(1.0, Vectors.dense([2.9, 2.9]))
+    # ]
+    # lrw = LinearRegressionWithSGD.train(sc.parallelize(data), iterations=50)
+    #
+    # v1 = lrw.predict(Vectors.dense([0.5, 0.9]))
+    # print v1
+
+    # 行数,列数,可算出每列非零的个数(前N列的非零个数，从下标1开始),行索引(每列),具体的值
+    # 例: [0,1,3] => colNums=[1-0,3-1]=[1,2](非零的个数)
+    # Matrices.sparse(3, 2, [0, 1, 3], [0, 2, 1], [9, 6, 8])
+    # 描述： 3 * 2 的矩阵,第一列的非零个数 1=1-0,索引为0 ==> 坐标(0,0),值为9
+    # 第二列非零的个数： 2=3-1，坐标为:(1,2)值为6,(1,1)值为8
+    ms = Matrices.sparse(3, 2, [0, 1, 3], [0, 2, 1], [9, 6, 8])
+    print ms.toDense()
+    ms2 = Matrices.dense(3, 2, [1, 3, 5, 2, 4, 6])
+    print ms
+    print ms2
+
+
 if __name__ == "__main__":
     # user_data()
     # mc_data()
-    # regression()
+    regression()
     # optimize_regression()
     # clustering()
     # data_reduce_dimesion()
     # analysis_nlp()
-    svd()
+    # svd()
 
-    jieba.cut()
+    # jieba.cut()
+    # parse_test()
